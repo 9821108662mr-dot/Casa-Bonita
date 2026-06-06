@@ -9,12 +9,26 @@ export default function Home({ onOpenQR }) {
 
   useEffect(() => {
     async function fetchCategories() {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
       const { data } = await supabase.from('categories').select('*');
       if (data) setCategories(data);
       setLoading(false);
     }
     fetchCategories();
   }, []);
+
+  if (!supabase) {
+    return (
+      <div className="container animate-fade-in" style={{ textAlign: 'center', marginTop: '5rem' }}>
+        <h2 style={{ color: '#ff6b6b' }}>Error de Configuración</h2>
+        <p>Las variables de entorno de Supabase no están configuradas.</p>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Si estás en local, reinicia el servidor. Si estás en Vercel, agrega las variables y dale a Redeploy.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container animate-fade-in">
