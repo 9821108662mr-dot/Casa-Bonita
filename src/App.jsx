@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './components/Home';
 import CategoryView from './components/CategoryView';
 import QRCodeModal from './components/QRCodeModal';
+import Login from './components/Login';
+import Admin from './components/Admin';
 
 function App() {
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -15,6 +17,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home onOpenQR={() => setIsQRModalOpen(true)} />} />
         <Route path="/categoria/:id" element={<CategoryView onOpenQR={() => setIsQRModalOpen(true)} />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
 
       <QRCodeModal 

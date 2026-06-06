@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { catalogData } from '../data/catalog';
+import { supabase } from '../supabaseClient';
 import { QrCode } from 'lucide-react';
 
 export default function Home({ onOpenQR }) {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const { data } = await supabase.from('categories').select('*');
+      if (data) setCategories(data);
+      setLoading(false);
+    }
+    fetchCategories();
+  }, []);
+
   return (
     <div className="container animate-fade-in">
       <header className="app-header">
@@ -19,20 +31,24 @@ export default function Home({ onOpenQR }) {
       <h1>Catálogo de Acabados</h1>
       <p>Selecciona un espacio para explorar nuestras opciones premium.</p>
 
-      <div className="grid-container">
-        {catalogData.map((category) => (
-          <Link to={`/categoria/${category.id}`} key={category.id} className="category-card">
-            <img src={category.image} alt={category.title} loading="lazy" />
-            <div className="overlay"></div>
-            <div className="category-card-content">
-              <h2 style={{ color: '#fff' }}>{category.title}</h2>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: 0 }}>
-                {category.description}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {loading ? (
+        <p style={{ marginTop: '2rem', textAlign: 'center' }}>Cargando catálogo...</p>
+      ) : (
+        <div className="grid-container">
+          {categories.map((category) => (
+            <Link to={`/categoria/${category.id}`} key={category.id} className="category-card">
+              <img src={category.image_url} alt={category.title} loading="lazy" />
+              <div className="overlay"></div>
+              <div className="category-card-content">
+                <h2 style={{ color: '#fff' }}>{category.title}</h2>
+                <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: 0 }}>
+                  {category.description}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

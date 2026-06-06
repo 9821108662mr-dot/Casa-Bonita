@@ -1,11 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { catalogData } from '../data/catalog';
+import { supabase } from '../supabaseClient';
 import { ArrowLeft, QrCode } from 'lucide-react';
 
 export default function CategoryView({ onOpenQR }) {
   const { id } = useParams();
-  const category = catalogData.find(c => c.id === id);
+  const [category, setCategory] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: catData } = await supabase.from('categories').select('*').eq('id', id).single();
+      const { data: matData } = await supabase.from('materials').select('*').eq('category_id', id);
+      
+      if (catData) setCategory(catData);
+      if (matData) setMaterials(matData);
+      setLoading(false);
+    }
+    fetchData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="container animate-fade-in">
+        <p style={{ textAlign: 'center', marginTop: '2rem' }}>Cargando materiales...</p>
+      </div>
+    );
+  }
 
   if (!category) {
     return (
@@ -40,17 +62,21 @@ export default function CategoryView({ onOpenQR }) {
       <h1 style={{ marginBottom: '0.2rem' }}>{category.title}</h1>
       <p style={{ marginBottom: '2rem' }}>Explora los materiales disponibles</p>
 
-      <div className="grid-container" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
-        {category.items.map(item => (
-          <div key={item.id} className="material-card">
-            <img src={item.image} alt={item.name} loading="lazy" />
-            <div className="material-card-info">
-              <div className="material-type">{item.type}</div>
-              <div className="material-name">{item.name}</div>
+      {materials.length === 0 ? (
+        <p>Aún no hay materiales en esta categoría.</p>
+      ) : (
+        <div className="grid-container" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))' }}>
+          {materials.map(item => (
+            <div key={item.id} className="material-card">
+              <img src={item.image_url} alt={item.name} loading="lazy" />
+              <div className="material-card-info">
+                <div className="material-type">{item.type}</div>
+                <div className="material-name">{item.name}</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
