@@ -3,7 +3,6 @@ import { supabase } from '../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Admin() {
-  const [session, setSession] = useState(null);
   const [categories, setCategories] = useState([]);
   const [name, setName] = useState('');
   const [type, setType] = useState('');
@@ -14,17 +13,16 @@ export default function Admin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate('/login');
-      } else {
-        setSession(session);
-        fetchCategories();
-      }
-    });
+    const isAuth = sessionStorage.getItem('admin_auth');
+    if (!isAuth) {
+      navigate('/login');
+      return;
+    }
+    fetchCategories();
   }, [navigate]);
 
   const fetchCategories = async () => {
+    if (!supabase) return;
     const { data } = await supabase.from('categories').select('*');
     if (data) {
       setCategories(data);
@@ -32,23 +30,23 @@ export default function Admin() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_auth');
     navigate('/');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file || !name || !type || !categoryId) return;
-    
+    if (!supabase) { setMessage('Error: Supabase no está configurado.'); return; }
+
     setLoading(true);
     setMessage('');
-    
-    // 1. Upload image
+
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${categoryId}/${fileName}`;
-    
+
     const { error: uploadError } = await supabase.storage
       .from('catalog-images')
       .upload(filePath, file);
@@ -59,32 +57,25 @@ export default function Admin() {
       return;
     }
 
-    // 2. Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('catalog-images')
       .getPublicUrl(filePath);
 
-    // 3. Insert into database
     const { error: insertError } = await supabase
       .from('materials')
-      .insert([
-        { name, type, category_id: categoryId, image_url: publicUrl }
-      ]);
+      .insert([{ name, type, category_id: categoryId, image_url: publicUrl }]);
 
     if (insertError) {
       setMessage('Error al guardar: ' + insertError.message);
     } else {
-      setMessage('¡Material agregado con éxito!');
+      setMessage('✅ ¡Material publicado con éxito!');
       setName('');
       setType('');
       setFile(null);
-      // Opcional: resetear formulario de archivo
-      document.getElementById('file-upload').value = "";
+      document.getElementById('file-upload').value = '';
     }
     setLoading(false);
   };
-
-  if (!session) return null;
 
   return (
     <div className="container animate-fade-in">
@@ -92,30 +83,42 @@ export default function Admin() {
         <Link to="/" className="logo">
           <img src="/logo.png" alt="Casa Bonita GL" className="logo-img" />
         </Link>
-        <button className="qr-button" onClick={handleLogout} style={{ background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b' }}>
+        <button
+          className="qr-button"
+          onClick={handleLogout}
+          style={{ borderColor: '#ff6b6b', color: '#ff6b6b' }}
+        >
           Cerrar Sesión
         </button>
       </header>
 
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h1 style={{ marginBottom: '2rem' }}>Panel de Control</h1>
-        
+        <h1 style={{ marginBottom: '0.5rem' }}>Panel de Control</h1>
+        <p style={{ marginBottom: '2rem' }}>Agrega nuevos materiales a tu catálogo</p>
+
         <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>Agregar Nuevo Material</h2>
-          
+          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>Nuevo Material</h2>
+
           {message && (
-            <div style={{ padding: '1rem', marginBottom: '1.5rem', borderRadius: '8px', background: message.includes('Error') ? 'rgba(255,0,0,0.1)' : 'rgba(0,255,0,0.1)', color: message.includes('Error') ? '#ff6b6b' : '#4ade80' }}>
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              borderRadius: '8px',
+              background: message.includes('Error') ? 'rgba(255,0,0,0.1)' : 'rgba(0,200,100,0.1)',
+              color: message.includes('Error') ? '#ff6b6b' : '#4ade80',
+              fontWeight: '500'
+            }}>
               {message}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Categoría</label>
-              <select 
-                value={categoryId} 
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Categoría</label>
+              <select
+                value={categoryId}
                 onChange={e => setCategoryId(e.target.value)}
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: '#1a1a1c', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: '#1a1a1c', color: 'white', fontSize: '1rem' }}
               >
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.title}</option>
@@ -124,45 +127,57 @@ export default function Admin() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Nombre del Material (ej. Mármol Blanco)</label>
-              <input 
-                type="text" 
-                value={name} 
-                onChange={e => setName(e.target.value)} 
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Nombre del Material</label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ej: Mármol Blanco Carrara"
                 required
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '1rem' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Tipo (ej. Cubierta, Piso, Muro)</label>
-              <input 
-                type="text" 
-                value={type} 
-                onChange={e => setType(e.target.value)} 
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Tipo</label>
+              <input
+                type="text"
+                value={type}
+                onChange={e => setType(e.target.value)}
+                placeholder="Ej: Cubierta, Piso, Muro"
                 required
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '1rem' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>Imagen del Material</label>
-              <input 
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Imagen del Material</label>
+              <input
                 id="file-upload"
-                type="file" 
+                type="file"
                 accept="image/*"
-                onChange={e => setFile(e.target.files[0])} 
+                onChange={e => setFile(e.target.files[0])}
                 required
-                style={{ width: '100%', padding: '0.8rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--card-border)', borderRadius: '8px' }}
+                style={{ width: '100%', padding: '0.8rem', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--card-border)', borderRadius: '8px', color: 'var(--text-secondary)' }}
               />
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
-              style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: 'var(--accent-color)', color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}
+              style={{
+                marginTop: '0.5rem',
+                padding: '1rem',
+                borderRadius: '10px',
+                background: 'var(--accent-color)',
+                color: '#000',
+                fontWeight: 'bold',
+                fontSize: '1.05rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1
+              }}
             >
-              {loading ? 'Subiendo y Guardando...' : 'Publicar Material'}
+              {loading ? 'Subiendo imagen y guardando...' : '+ Publicar Material'}
             </button>
           </form>
         </div>
