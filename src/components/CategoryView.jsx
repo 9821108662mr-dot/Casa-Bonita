@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ArrowLeft, QrCode } from 'lucide-react';
+import { ArrowLeft, QrCode, Settings } from 'lucide-react';
 
 export default function CategoryView({ onOpenQR }) {
   const { id } = useParams();
@@ -49,10 +49,16 @@ export default function CategoryView({ onOpenQR }) {
         <Link to="/" className="logo">
           <img src="/logo.png" alt="Casa Bonita GL" className="logo-img" />
         </Link>
-        <button className="qr-button" onClick={onOpenQR}>
-          <QrCode size={18} />
-          <span>Generar QR</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button className="qr-button" onClick={onOpenQR}>
+            <QrCode size={18} />
+            <span>Generar QR</span>
+          </button>
+          <Link to="/login" className="qr-button" style={{ textDecoration: 'none' }}>
+            <Settings size={18} />
+            <span>Admin</span>
+          </Link>
+        </div>
       </header>
 
       <Link to="/" className="back-button">
