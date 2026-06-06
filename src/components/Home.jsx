@@ -7,7 +7,9 @@ export default function Home({ onOpenQR }) {
   return (
     <div className="container animate-fade-in">
       <header className="app-header">
-        <div className="logo">Casa Bonita</div>
+        <Link to="/" className="logo">
+          <img src="/logo.png" alt="Casa Bonita GL" className="logo-img" />
+        </Link>
         <button className="qr-button" onClick={onOpenQR}>
           <QrCode size={18} />
           <span>Generar QR</span>

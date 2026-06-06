@@ -11,7 +11,9 @@ export default function CategoryView({ onOpenQR }) {
     return (
       <div className="container animate-fade-in">
         <header className="app-header">
-          <Link to="/" className="logo">Casa Bonita</Link>
+          <Link to="/" className="logo">
+            <img src="/logo.png" alt="Casa Bonita GL" className="logo-img" />
+          </Link>
         </header>
         <h1>Categoría no encontrada</h1>
         <Link to="/" className="back-button"><ArrowLeft size={18} /> Volver al inicio</Link>
@@ -22,7 +24,9 @@ export default function CategoryView({ onOpenQR }) {
   return (
     <div className="container animate-fade-in">
       <header className="app-header">
-        <Link to="/" className="logo">Casa Bonita</Link>
+        <Link to="/" className="logo">
+          <img src="/logo.png" alt="Casa Bonita GL" className="logo-img" />
+        </Link>
         <button className="qr-button" onClick={onOpenQR}>
           <QrCode size={18} />
           <span>Generar QR</span>
